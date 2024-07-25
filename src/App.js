@@ -4,37 +4,22 @@ import LoadingSpinner from './components/LoadingSpinner/LoadingSpinner';
 import ResponseDisplay from './components/ResponseDisplay/ResponseDisplay';
 import FilesDisplay from './components/FilesDisplay/FilesDisplay';
 import BlockscoutResponseDisplay from './components/BlockscoutResponseDisplay/BlockscoutResponseDisplay';
+import { fetchSourcifyData, fetchFilesData } from './services/sourcifyApi';
+import { fetchBlockscoutData } from './services/blockscoutApi';
+import { fetchAirtableData } from './services/airtableApi';
+import AppContext from './contexts/AppContext';
 import './App.css';
 
-const explorerUrls = {
-  "10": "https://optimistic.etherscan.io/address/",
-  "1101": "https://zkevm.polygonscan.com/address/",
-  "34443": "https://explorer.mode.network/address/",
-  "42161": "https://arbiscan.io/address/",
-  "534352": "https://scrollscan.com/address/",
-  "7777777": "https://explorer.zora.energy/address/",
-  "8453": "https://basescan.org/address/",
-  "342": "https://explorer.zksync.io/address/"
-};
-
-const blockscoutUrls = {
-  "10": "https://optimism.blockscout.com/api/v2/smart-contracts/",
-  "1101": "https://explorer.zkevm.com/api/v2/smart-contracts/",
-  "34443": "https://explorer.mode.network/api/v2/smart-contracts/",
-  "42161": "https://arbitrum.blockscout.com/api/v2/smart-contracts/",
-  "534352": "https://explorer.scroll.io/api/v2/smart-contracts/",
-  "7777777": "https://explorer.zora.energy/api/v2/smart-contracts/",
-  "8453": "https://base.blockscout.com/api/v2/smart-contracts/",
-  "342": "https://zksync.blockscout.com/api/v2/smart-contracts/"
-};
-
-function App() {
+const App = () => {
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState(null);
   const [files, setFiles] = useState(null);
   const [blockscoutResponse, setBlockscoutResponse] = useState(null);
   const [contractAddress, setContractAddress] = useState('');
   const [chainId, setChainId] = useState('');
+  const [airtableData, setAirtableData] = useState([]);
+  const [ownerProjectSearch, setOwnerProjectSearch] = useState('');
+  const [filteredAirtableData, setFilteredAirtableData] = useState([]);
 
   useEffect(() => {
     const handleMessage = (event) => {
@@ -50,6 +35,30 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const getAirtableData = async () => {
+      try {
+        const data = await fetchAirtableData();
+        setAirtableData(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    getAirtableData();
+  }, []);
+
+  useEffect(() => {
+    if (ownerProjectSearch) {
+      const filtered = airtableData.filter((item) =>
+        item.Name.toLowerCase().includes(ownerProjectSearch.toLowerCase())
+      );
+      setFilteredAirtableData(filtered);
+    } else {
+      setFilteredAirtableData([]);
+    }
+  }, [ownerProjectSearch, airtableData]);
+
   const handleFormSubmit = async (selectedChainId, contractAddress) => {
     setLoading(true);
     setResponse(null);
@@ -58,10 +67,8 @@ function App() {
     setContractAddress(contractAddress);
     setChainId(selectedChainId);
 
-    const url = `https://sourcify.dev/server/check-all-by-addresses?addresses=${contractAddress}&chainIds=${selectedChainId}`;
     try {
-      const res = await fetch(url);
-      const data = await res.json();
+      const data = await fetchSourcifyData(contractAddress, selectedChainId);
       setResponse(data);
     } catch (error) {
       setResponse({ error: error.message });
@@ -74,29 +81,29 @@ function App() {
     setLoading(true);
     setFiles(null);
 
-    const url = `https://sourcify.dev/server/files/tree/any/${selectedChainId}/${contractAddress}`;
     try {
-      const res = await fetch(url);
-      const data = await res.json();
-      const srcFiles = data.files.filter(file => file.includes('/src/') && file.endsWith('.sol'));
-      const fileContents = await Promise.all(srcFiles.map(async (file) => {
-        const fileRes = await fetch(file);
-        const fileContent = await fileRes.text();
-        return { url: file, content: fileContent };
-      }));
-      setFiles({ ...data, files: fileContents });
+      const data = await fetchFilesData(contractAddress, selectedChainId);
+      setFiles(data);
     } catch (error) {
       setFiles({ error: error.message });
     } finally {
       setLoading(false);
     }
   };
+  const explorerUrls = {
+    "10": "https://optimistic.etherscan.io/address/",
+    "1101": "https://zkevm.polygonscan.com/address/",
+    "34443": "https://explorer.mode.network/address/",
+    "42161": "https://arbiscan.io/address/",
+    "534352": "https://scrollscan.com/address/",
+    "7777777": "https://explorer.zora.energy/address/",
+    "8453": "https://basescan.com/address/",
+    "342": "https://explorer.zksync.io/address/"
+  };
 
   const handleBlockscoutButtonClick = async () => {
-    const blockscoutUrl = `${blockscoutUrls[chainId]}${contractAddress}`;
     try {
-      const res = await fetch(blockscoutUrl);
-      const data = await res.json();
+      const data = await fetchBlockscoutData(contractAddress, chainId);
       setBlockscoutResponse(data);
     } catch (error) {
       setBlockscoutResponse({ error: error.message });
@@ -114,12 +121,21 @@ function App() {
   };
 
   const handleExplorerButtonClick = () => {
+    if (!explorerUrls[chainId]) {
+      console.error(`No explorer URL found for chain ID: ${chainId}`);
+      return;
+    }
     const explorerUrl = `${explorerUrls[chainId]}${contractAddress}`;
     window.open(explorerUrl, '_blank');
   };
 
   return (
     <div className="container">
+      <div className="background-gradient-group">
+        <div className="background-gradient-green"></div>
+        <div className="background-gradient-yellow"></div>
+      </div>
+
       <div className="unlabeled section">
         <h2 className="section-title">Unlabeled Contracts</h2>
         <iframe
@@ -161,7 +177,29 @@ function App() {
           <input type="text" id="contractName" className="form-control" />
 
           <label htmlFor="ownerProject">Owner Project</label>
-          <input type="text" id="ownerProject" className="form-control" />
+          <input
+            type="text"
+            id="ownerProject"
+            className="form-control"
+            value={ownerProjectSearch}
+            onChange={(e) => setOwnerProjectSearch(e.target.value)}
+          />
+          {filteredAirtableData.length > 0 && (
+            <div className="dropdown-menu">
+              {filteredAirtableData.map((item) => (
+                <div
+                  key={item.id}
+                  className="dropdown-item"
+                  onClick={() => {
+                    setOwnerProjectSearch(item.Name);
+                    setFilteredAirtableData([]);
+                  }}
+                >
+                  {item.Name}
+                </div>
+              ))}
+            </div>
+          )}
 
           <label htmlFor="usageCategory">Usage Category</label>
           <input type="text" id="usageCategory" className="form-control" />
@@ -202,4 +240,6 @@ function App() {
       </div>
     </div>
   );
-}
+};
+
+export default App;
