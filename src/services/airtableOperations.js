@@ -69,3 +69,46 @@ export const fetchCategories = async () => {
     throw error;
   }
 };
+
+export const updateAirtableRecord = async (recordId, labelInfo) => {
+  const API_KEY = process.env.REACT_APP_AIRTABLE_TOKEN; // Ensure you have your API key set in your environment variables
+  const AIRTABLE_BASE_URL = 'https://api.airtable.com/v0/appZWDvjvDmVnOici'; // Use your actual base ID
+  const tableName = 'tblcXnFAf0IEvAQA6'; // Replace with your actual table name or ID
+  const url = `${AIRTABLE_BASE_URL}/${tableName}/${recordId}`;
+
+  const requestBody = {
+    fields: {
+      owner_project: labelInfo.ownerProject,  // Ensure these match your Airtable field names
+      usage_category: labelInfo.usageCategory,
+      contract_name: labelInfo.contractName,
+      labelling_type: "info@orbal-analytics.com" // This field is always set to "orbal"
+    },
+    typecast: true // Enable automatic data conversion
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      // Capture detailed error response from Airtable
+      const errorDetails = await response.json();
+      console.error('Error details:', errorDetails);
+      throw new Error('Failed to update Airtable record');
+    }
+
+    const data = await response.json();
+    console.log('Record updated successfully:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating Airtable record:', error);
+  }
+};
+
+

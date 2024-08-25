@@ -1,16 +1,36 @@
 import React, { useState } from 'react';
+import { fetchAirtableDataWithChainId } from '../../services/airtableApi'; // Step 1: Import the function
 
-const ContractForm = ({ onFormSubmit, onFetchFiles }) => {
+const ContractForm = ({ onFormSubmit, onFetchFiles, }) => {
   const [chainId, setChainId] = useState('10');
   const [contractAddress, setContractAddress] = useState('');
+  const [recordId, setRecordId] = useState(''); // Step 2: New state for record ID
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onFormSubmit(chainId, contractAddress);
+    fetchRecordId(); // Fetch record ID on form submit
   };
 
   const handleFetchFiles = () => {
     onFetchFiles(chainId, contractAddress);
+  };
+
+  // Step 3: Function to fetch record ID
+  const fetchRecordId = async () => {
+    try {
+      // Pass chainId to the fetch function
+      const records = await fetchAirtableDataWithChainId(chainId);
+      const matchingRecord = records.find(record => record.address === contractAddress);
+      if (matchingRecord) {
+        setRecordId(matchingRecord.id);
+      } else {
+        setRecordId('No matching record found');
+      }
+    } catch (error) {
+      console.error('Error fetching record ID:', error);
+      setRecordId('Error fetching record ID');
+    }
   };
 
   return (
@@ -50,6 +70,11 @@ const ContractForm = ({ onFormSubmit, onFetchFiles }) => {
         <button type="submit" className="btn btn-primary">Sourcify</button>
         <button type="button" className="btn btn-secondary" onClick={handleFetchFiles}>Fetch Files</button>
       </div>
+      {/* Step 4: Update UI to display the record ID */}
+      {recordId && <div className="form-group mt-3">
+        <label>Record ID:</label>
+        <p>{recordId}</p>
+      </div>}
     </form>
   );
 };

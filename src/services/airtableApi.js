@@ -1,9 +1,28 @@
 // src/services/airtableApi.js
-const AIRTABLE_API_URL = 'https://api.airtable.com/v0/appZWDvjvDmVnOici/tblZxky1IdnhEJEDv';
-const API_KEY = process.env.REACT_APP_AIRTABLE_API_KEY;
+const AIRTABLE_BASE_URL = 'https://api.airtable.com/v0/appZWDvjvDmVnOici/tblcXnFAf0IEvAQA6'; // Updated to API endpoint
+const API_KEY = process.env.REACT_APP_AIRTABLE_TOKEN;
 
-export const fetchAirtableData = async () => {
-  const response = await fetch(`${AIRTABLE_API_URL}?view=viw8ydkpuAmi6TCr9`, {
+const chainIdToOriginKey = {
+  "10": "optimism",
+  "1101": "polygon_zkevm",
+  "34443": "mode",
+  "42161": "arbitrum",
+  "534352": "scroll",
+  "7777777": "zora",
+  "8453": "base",
+  "324": "zksync_era"
+};
+
+export const fetchAirtableDataWithChainId = async (chainId) => {
+  const originKey = chainIdToOriginKey[chainId];
+  if (!originKey) {
+    throw new Error('Invalid Chain ID');
+  }
+
+  const filterByFormula = `FIND("${originKey}", {origin_key})`;
+  const url = `${AIRTABLE_BASE_URL}?filterByFormula=${encodeURIComponent(filterByFormula)}&view=viwFVTWjj0HBWnpiB&fields[]=address`;
+
+  const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${API_KEY}`
     }
@@ -14,5 +33,10 @@ export const fetchAirtableData = async () => {
   }
 
   const data = await response.json();
-  return data.records.map(record => record.fields);
+  console.log(`Number of records fetched for ${originKey}: ${data.records.length}`);
+
+  return data.records.map(record => ({
+    id: record.id,
+    address: record.fields.address
+  }));
 };

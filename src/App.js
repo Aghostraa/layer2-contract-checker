@@ -6,7 +6,8 @@ import FilesDisplay from './components/FilesDisplay/FilesDisplay';
 import BlockscoutResponseDisplay from './components/BlockscoutResponseDisplay/BlockscoutResponseDisplay';
 import { fetchSourcifyData, fetchFilesData } from './services/sourcifyApi';
 import { fetchBlockscoutData } from './services/blockscoutApi';
-import { fetchProjects, fetchCategories } from './services/airtableOperations';
+import { fetchProjects, fetchCategories, updateAirtableRecord } from './services/airtableOperations';
+import { fetchAirtableDataWithChainId } from './services/airtableApi';
 import './App.css';
 
 const App = () => {
@@ -24,12 +25,21 @@ const App = () => {
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const projectDropdownRef = useRef(null);
   const categoryDropdownRef = useRef(null);
+  const [recordId, setRecordId] = useState('');
+  const [labelInfo, setLabelInfo] = useState({
+    ownerProject: '',
+    usageCategory: '',
+    contractName: '',});
+  const [updateStatus, setUpdateStatus] = useState('');
+  
 
   useEffect(() => {
     const fetchAirtableData = async () => {
       try {
         const projectsData = await fetchProjects();
         const categoriesData = await fetchCategories();
+        const fetchedRecordId = await fetchAirtableDataWithChainId(chainId);
+        setRecordId(fetchedRecordId[0].id); // Assuming only one record is fetched
         setProjects(projectsData);
         setCategories(categoriesData);
       } catch (error) {
@@ -38,7 +48,7 @@ const App = () => {
     };
 
     fetchAirtableData();
-  }, []);
+  }, [chainId]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -55,6 +65,14 @@ const App = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const handleInputChange = (e) => {
+    const { id, value } = e.target;
+    setLabelInfo(prevState => ({
+      ...prevState,
+      [id]: value, // Use the input's `id` attribute to update the correct field in `labelInfo`
+    }));
+  };
 
   const handleFormSubmit = async (selectedChainId, contractAddress) => {
     setLoading(true);
@@ -107,6 +125,36 @@ const App = () => {
     window.open(googleUrl, '_blank');
   };
 
+  const dedaubUrls = {
+    "10": "https://app.dedaub.com/optimism/address/",
+    "1101": "https://app.dedaub.com/polygon_zkevm/address/",
+    "34443": "https://app.dedaub.com/mode/address/",
+    "42161": "https://app.dedaub.com/arbitrum/address/",
+    "534352": "https://app.dedaub.com/scroll/address/",
+    "7777777": "https://app.dedaub.com/zora/address/",
+    "8453": "https://app.dedaub.com/base/address/",
+    "324": "https://app.dedaub.com/zksync_era/address/"
+  };
+
+  const getDedaubUrl = (chainId, contractAddress) => {
+    const baseUrl = dedaubUrls[chainId];
+    if (!baseUrl) {
+      console.error(`No Dedaub URL found for chain ID: ${chainId}`);
+      return '';
+    }
+    return `${baseUrl}${contractAddress}/overview`;
+  };
+
+  const handleDedaubButtonClick = () => {
+    const dedaubUrl = getDedaubUrl(chainId, contractAddress);
+    if (dedaubUrl) {
+      window.open(dedaubUrl, '_blank');
+    } else {
+      console.error('Dedaub URL is not available.');
+    }
+  };
+  
+
   const handleExplorerButtonClick = () => {
     const explorerUrls = {
       "10": "https://optimistic.etherscan.io/address/",
@@ -146,14 +194,23 @@ const App = () => {
   );
 
   const selectProject = (project) => {
+    setLabelInfo(prevState => ({
+      ...prevState,
+      ownerProject: project.name, // Update labelInfo with selected project
+    }));
     setProjectSearch(project.name);
     setIsProjectDropdownOpen(false);
   };
 
   const selectCategory = (category) => {
+    setLabelInfo(prevState => ({
+      ...prevState,
+      usageCategory: category.name, // Update labelInfo with selected category
+    }));
     setCategorySearch(category.name);
     setIsCategoryDropdownOpen(false);
   };
+  
 
   return (
     <>
@@ -175,10 +232,12 @@ const App = () => {
         </div>
         <div className="analyse section">
           <h2 className="section-title">Analyse</h2>
-          <ContractForm 
-            onFormSubmit={handleFormSubmit} 
-            onFetchFiles={handleFetchFiles} 
-            contractAddress={contractAddress}
+          <ContractForm
+           onFormSubmit={handleFormSubmit}
+           onFetchFiles={handleFetchFiles}
+           setRecordId={setRecordId} // Pass setRecordId as prop
+           setLabelInfo={setLabelInfo} // Pass setLabelInfo as prop
+           updateStatus={setUpdateStatus} // Pass setUpdateStatus as prop for updating status
           />
           {loading && <LoadingSpinner />}
           {response && <ResponseDisplay response={response} />}
@@ -188,6 +247,7 @@ const App = () => {
               <button className="btn" onClick={handleBlockscoutButtonClick}>Blockscout</button>
               <button className="btn" onClick={handleExplorerButtonClick}>Explorer</button>
               <button className="btn btn-secondary" onClick={handleGoogleButtonClick}>Google Search</button>
+              <button className="btn btn-secondary" onClick={handleDedaubButtonClick}>Dedaub Lookup</button> {/* New Button */}
             </div>
           )}
           {files && <FilesDisplay files={files} />}
@@ -241,12 +301,43 @@ const App = () => {
             </div>
 
             <label htmlFor="contractName">Contract Name</label>
-            <input type="text" id="contractName" className="form-control" />
+            <input 
+              type="text" 
+              id="contractName" 
+              value={labelInfo.contractName}
+              onChange={handleInputChange}
+              className="form-control" 
+            />
 
             <label htmlFor="labeler">Labeler</label>
-            <input type="text" id="labeler" className="form-control" />
+            <input 
+              type="text" 
+              id="labeler" 
+              value={labelInfo.labeler}
+              onChange={handleInputChange}
+              className="form-control" 
+            />
             
-            <button className="btn btn-primary">Submit</button>
+            <button className="btn btn-primary" onClick={() => { 
+              if (recordId) {
+                setLoading(true);
+                updateAirtableRecord(recordId, labelInfo)
+                  .then(response => {
+                   setUpdateStatus('Success');
+                   setLoading(false);
+                 })
+                 .catch(error => {
+                   console.error('Error updating record:', error);
+                   setUpdateStatus('Failed');
+                   setLoading(false);
+                 });
+                } else {
+                  console.error('Record ID is not available');
+                  setUpdateStatus('Failed');
+                }
+            }}>
+              Submit
+            </button>
           </div>
 
           <div className="ranking-container">
