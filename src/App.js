@@ -8,6 +8,7 @@ import { fetchSourcifyData, fetchFilesData } from './services/sourcifyApi';
 import { fetchBlockscoutData } from './services/blockscoutApi';
 import { fetchProjects, fetchCategories, updateAirtableRecord } from './services/airtableOperations';
 import { fetchAirtableDataWithChainId } from './services/airtableApi';
+import UnlabeledContractsTable from './components/UnlabeledContractsTable/UnlabeledContractsTable';
 import './App.css';
 
 const App = () => {
@@ -16,7 +17,7 @@ const App = () => {
   const [files, setFiles] = useState(null);
   const [blockscoutResponse, setBlockscoutResponse] = useState(null);
   const [contractAddress, setContractAddress] = useState('');
-  const [chainId, setChainId] = useState('');
+  const [chainId, setChainId] = useState('42161');
   const [projects, setProjects] = useState([]);
   const [categories, setCategories] = useState([]);
   const [projectSearch, setProjectSearch] = useState('');
@@ -31,11 +32,13 @@ const App = () => {
     usageCategory: '',
     contractName: '',});
   const [updateStatus, setUpdateStatus] = useState('');
+  const [refreshTable, setRefreshTable] = useState(false);
   
 
   useEffect(() => {
     const fetchAirtableData = async () => {
       try {
+        console.log('Fetching data for chainId:', chainId);
         const projectsData = await fetchProjects();
         const categoriesData = await fetchCategories();
         const fetchedRecordId = await fetchAirtableDataWithChainId(chainId);
@@ -47,7 +50,9 @@ const App = () => {
       }
     };
 
-    fetchAirtableData();
+    if (chainId) {
+      fetchAirtableData();
+    }
   }, [chainId]);
 
   useEffect(() => {
@@ -65,6 +70,33 @@ const App = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const handleSelectAddress = async (address) => {
+    setContractAddress(address); // This will update the contract address in your form
+
+    // Fetch the record ID corresponding to the clicked address
+    try {
+      const records = await fetchAirtableDataWithChainId(chainId); // Fetch records based on the current chain ID
+      const matchingRecord = records.find(record => record.address === address);
+      if (matchingRecord) {
+        setRecordId(matchingRecord.id); // Save the record ID
+        console.log('Record ID saved:', matchingRecord.id); // Log the saved record ID
+      } else {
+        console.log('No matching record found for address:', address);
+        setRecordId(''); // Clear record ID if no match is found
+      }
+    } catch (error) {
+      console.error('Error fetching record ID:', error);
+      setRecordId(''); // Clear record ID if there's an error
+    }
+  };
+
+  const handleChainChange = (newChainId) => {
+    setChainId(newChainId);
+    setContractAddress(''); // Reset contract address if needed
+    setRecordId(''); // Reset record ID if needed
+    // Trigger a re-fetch of the unlabeled contracts automatically via useEffect
+  };
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;
@@ -223,21 +255,31 @@ const App = () => {
       <div className="container">
         <div className="unlabeled section">
           <h2 className="section-title">Unlabeled Contracts</h2>
-          <iframe
-            className="airtable-embed"
-            src="https://airtable.com/embed/appZWDvjvDmVnOici/shrOw3v4Tn1InPmmF?viewControls=on"
-            frameBorder="0"
-            onMouseWheel=""
-          ></iframe>
+          <select onChange={(e) => handleChainChange(e.target.value)} value={chainId}>
+           <option value="42161">Arbitrum</option>
+           <option value="10">Optimism</option>
+           <option value="8453">Base</option>
+           <option value="342">ZKSync</option>
+           <option value="7777777">Zora</option>
+           <option value="534352">Scroll</option>
+           <option value="34443">Mode</option>
+          </select>
+          <UnlabeledContractsTable 
+            chainId={chainId} 
+            onSelectAddress={handleSelectAddress}
+            refresh={refreshTable}
+          />
         </div>
         <div className="analyse section">
           <h2 className="section-title">Analyse</h2>
           <ContractForm
-           onFormSubmit={handleFormSubmit}
-           onFetchFiles={handleFetchFiles}
-           setRecordId={setRecordId} // Pass setRecordId as prop
-           setLabelInfo={setLabelInfo} // Pass setLabelInfo as prop
-           updateStatus={setUpdateStatus} // Pass setUpdateStatus as prop for updating status
+            onFormSubmit={handleFormSubmit}
+            onFetchFiles={handleFetchFiles}
+            setRecordId={setRecordId} // Pass setRecordId as prop
+            setLabelInfo={setLabelInfo} // Pass setLabelInfo as prop
+            updateStatus={setUpdateStatus} // Pass setUpdateStatus as prop for updating status
+            contractAddress={contractAddress} // Pass down the contract address
+            setContractAddress={setContractAddress}
           />
           {loading && <LoadingSpinner />}
           {response && <ResponseDisplay response={response} />}
@@ -247,7 +289,7 @@ const App = () => {
               <button className="btn" onClick={handleBlockscoutButtonClick}>Blockscout</button>
               <button className="btn" onClick={handleExplorerButtonClick}>Explorer</button>
               <button className="btn btn-secondary" onClick={handleGoogleButtonClick}>Google Search</button>
-              <button className="btn btn-secondary" onClick={handleDedaubButtonClick}>Dedaub Lookup</button> {/* New Button */}
+              <button className="btn btn-secondary" onClick={handleDedaubButtonClick}>Dedaub Lookup</button>
             </div>
           )}
           {files && <FilesDisplay files={files} />}
@@ -277,7 +319,7 @@ const App = () => {
                 </ul>
               )}
             </div>
-
+  
             <div className="searchable-dropdown" ref={categoryDropdownRef}>
               <label htmlFor="usageCategory">Usage Category</label>
               <input
@@ -299,7 +341,7 @@ const App = () => {
                 </ul>
               )}
             </div>
-
+  
             <label htmlFor="contractName">Contract Name</label>
             <input 
               type="text" 
@@ -308,7 +350,7 @@ const App = () => {
               onChange={handleInputChange}
               className="form-control" 
             />
-
+  
             <label htmlFor="labeler">Labeler</label>
             <input 
               type="text" 
@@ -323,8 +365,20 @@ const App = () => {
                 setLoading(true);
                 updateAirtableRecord(recordId, labelInfo)
                   .then(response => {
-                   setUpdateStatus('Success');
-                   setLoading(false);
+                    if(response) {
+                      setUpdateStatus('Success');
+                      setLoading(false);
+                      setContractAddress('');
+                      setRecordId('');
+                      setLabelInfo({
+                        ownerProject: '',
+                        usageCategory: '',
+                        contractName: '',
+                      });
+                      setRefreshTable(prev => !prev);
+                      console.log('Form fields cleared and table refreshed.');
+                    }
+                    setLoading(false);
                  })
                  .catch(error => {
                    console.error('Error updating record:', error);
@@ -339,7 +393,7 @@ const App = () => {
               Submit
             </button>
           </div>
-
+  
           <div className="ranking-container">
             <h3 className="section-subtitle">Chain Overview</h3>
             <h4 className="sub-subtitle">Unlabeled transactions</h4>

@@ -1,0 +1,77 @@
+.unlabeled-contracts-table {
+    margin-top: 20px;
+    background-color: var(--input-bg);
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+    max-height: 650px; /* Limit the height to make it scrollable */
+    overflow-y: auto;  /* Enable vertical scrolling */
+  }
+  
+  .unlabeled-contracts-table table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* Ensure fixed table layout */
+  }
+  
+  .unlabeled-contracts-table th, 
+  .unlabeled-contracts-table td {
+    padding: 5px 8px; /* Reduce padding further for a more compact look */
+    text-align: left;
+    color: var(--text-primary);
+    font-size: 0.85rem; /* Slightly smaller font size */
+    border-radius: 6px; /* Add rounded corners to cells */
+  }
+  
+  .unlabeled-contracts-table th {
+    background-color: var(--secondary-bg);
+    color: var(--text-primary);
+    border-radius: 6px;
+  }
+  
+  .unlabeled-contracts-table tr:nth-child(even) {
+    background-color: var(--primary-bg);
+  }
+  
+  .unlabeled-contracts-table tr:hover {
+    background-color: rgba(255, 255, 255, 0.05); /* Subtle background color change on hover */
+  }
+  
+  .address-link {
+    background: none;
+    border: none;
+    color: var(--accent-color);
+    cursor: pointer;
+    font-size: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Shorten the display of the contract address */
+    border-radius: 4px; /* Add rounded corners */
+  }
+  
+  .address-link:hover {
+    background-color: rgba(42, 52, 51, 0.7); /* Subtle background change on hover */
+    color: #ffffff; /* Change text color to white on hover for contrast */
+  }
+  
+  .address-link::after {
+    content: attr(data-full-address); /* Show full address in a tooltip */
+    position: absolute;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 10;
+  }
+  
+  .address-link:hover::after {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  

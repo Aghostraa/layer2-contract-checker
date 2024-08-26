@@ -1,4 +1,17 @@
 import { projectsTable, categoriesTable } from './airtableClient';
+const AIRTABLE_BASE_URL = 'https://api.airtable.com/v0/appZWDvjvDmVnOici/tblcXnFAf0IEvAQA6'; // Updated to API endpoint
+const API_KEY = process.env.REACT_APP_AIRTABLE_TOKEN;
+
+const chainIdToOriginKey = {
+  "10": "optimism",
+  "1101": "polygon_zkevm",
+  "34443": "mode",
+  "42161": "arbitrum",
+  "534352": "scroll",
+  "7777777": "zora",
+  "8453": "base",
+  "324": "zksync_era"
+};
 
 export const fetchProjects = async () => {
   try {
@@ -71,20 +84,24 @@ export const fetchCategories = async () => {
 };
 
 export const updateAirtableRecord = async (recordId, labelInfo) => {
-  const API_KEY = process.env.REACT_APP_AIRTABLE_TOKEN; // Ensure you have your API key set in your environment variables
-  const AIRTABLE_BASE_URL = 'https://api.airtable.com/v0/appZWDvjvDmVnOici'; // Use your actual base ID
-  const tableName = 'tblcXnFAf0IEvAQA6'; // Replace with your actual table name or ID
+  const API_KEY = process.env.REACT_APP_AIRTABLE_TOKEN;
+  const AIRTABLE_BASE_URL = 'https://api.airtable.com/v0/appZWDvjvDmVnOici'; // Replace with your base ID
+  const tableName = 'tblcXnFAf0IEvAQA6'; // Replace with your table name or ID
   const url = `${AIRTABLE_BASE_URL}/${tableName}/${recordId}`;
+
+  console.log('Updating Airtable record with ID:', recordId); // Log the record ID
 
   const requestBody = {
     fields: {
-      owner_project: labelInfo.ownerProject,  // Ensure these match your Airtable field names
+      owner_project: labelInfo.ownerProject,
       usage_category: labelInfo.usageCategory,
       contract_name: labelInfo.contractName,
       labelling_type: "info@orbal-analytics.com" // This field is always set to "orbal"
     },
     typecast: true // Enable automatic data conversion
   };
+
+  console.log('Request Body:', requestBody); // Log the request body
 
   try {
     const response = await fetch(url, {
@@ -97,9 +114,6 @@ export const updateAirtableRecord = async (recordId, labelInfo) => {
     });
 
     if (!response.ok) {
-      // Capture detailed error response from Airtable
-      const errorDetails = await response.json();
-      console.error('Error details:', errorDetails);
       throw new Error('Failed to update Airtable record');
     }
 
@@ -111,4 +125,35 @@ export const updateAirtableRecord = async (recordId, labelInfo) => {
   }
 };
 
+
+export const fetchUnlabeledContracts = async (chainId) => {
+  const originKey = chainIdToOriginKey[chainId];
+  if (!originKey) {
+    throw new Error('Invalid Chain ID');
+  }
+
+  const filterByFormula = `FIND("${originKey}", {origin_key})`;
+  const url = `${AIRTABLE_BASE_URL}?filterByFormula=${encodeURIComponent(filterByFormula)}&view=viwFVTWjj0HBWnpiB&fields[]=address&fields[]=gas_eth&fields[]=txcount&fields[]=avg_daa`;
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${API_KEY}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch Airtable data');
+  }
+
+  const data = await response.json();
+  console.log(`Number of records fetched for ${originKey}: ${data.records.length}`);
+
+  return data.records.map(record => ({
+    id: record.id,
+    address: record.fields.address,
+    gas_eth: record.fields.gas_eth,
+    txcount: record.fields.txcount,
+    avg_daa: record.fields.avg_daa,
+  }));
+};
 

@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect} from 'react';
 import { fetchAirtableDataWithChainId } from '../../services/airtableApi'; // Step 1: Import the function
 
-const ContractForm = ({ onFormSubmit, onFetchFiles, }) => {
+const ContractForm = ({ onFormSubmit, onFetchFiles, contractAddress, setContractAddress }) => {
   const [chainId, setChainId] = useState('10');
-  const [contractAddress, setContractAddress] = useState('');
   const [recordId, setRecordId] = useState(''); // Step 2: New state for record ID
+
+  useEffect(() => {
+    if (contractAddress) {
+      fetchRecordId(); // Fetch the record ID whenever the contract address changes
+    }
+  }, [contractAddress]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -62,7 +67,7 @@ const ContractForm = ({ onFormSubmit, onFetchFiles, }) => {
           id="contractAddress"
           placeholder="Enter contract address"
           value={contractAddress}
-          onChange={(e) => setContractAddress(e.target.value)}
+          onChange={(e) => setContractAddress(e.target.value)} // Update contract address from input
           required
         />
       </div>
@@ -70,7 +75,6 @@ const ContractForm = ({ onFormSubmit, onFetchFiles, }) => {
         <button type="submit" className="btn btn-primary">Sourcify</button>
         <button type="button" className="btn btn-secondary" onClick={handleFetchFiles}>Fetch Files</button>
       </div>
-      {/* Step 4: Update UI to display the record ID */}
       {recordId && <div className="form-group mt-3">
         <label>Record ID:</label>
         <p>{recordId}</p>

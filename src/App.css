@@ -98,7 +98,45 @@ body {
 .unlabeled.section {
   overflow: hidden;
 }
+.unlabeled select {
+  width: 100%; /* Make the dropdown take up the full width of its container */
+  padding: 10px 15px;
+  border-radius: 8px;
+  background-color: var(--secondary-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+  font-size: 1rem;
+  appearance: none; /* Remove default arrow */
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
 
+/* Add a custom arrow */
+.unlabeled select::-ms-expand {
+  display: none; /* Remove the default arrow in IE */
+}
+
+/* Adding a down arrow using a pseudo-element */
+.unlabeled select {
+  position: relative;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 140 140' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolygon points='0,0 140,0 70,70' fill='%23cdd8d3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 15px center;
+  background-size: 10px;
+}
+
+/* Hover effect */
+.unlabeled select:hover {
+  border-color: var(--accent-color);
+  background-color: rgba(42, 52, 51, 0.9);
+}
+
+/* Focus effect */
+.unlabeled select:focus {
+  outline: none;
+  border-color: var(--button-hover);
+  box-shadow: 0 0 5px rgba(42, 52, 51, 0.7);
+}
 iframe.airtable-embed {
   width: 100%;
   height: calc(100vh - 140px);
@@ -137,6 +175,10 @@ label {
   background-color: rgba(42, 52, 51, 0.9);
 }
 
+.form-control::placeholder, 
+input[type="text"]::placeholder {
+  color: rgba(255, 255, 255, 0.5); /* Semi-transparent white for placeholder text */
+}
 .btn, button {
   margin-top: 20px;
   padding: 10px 15px;
