@@ -33,27 +33,45 @@ const App = () => {
     contractName: '',});
   const [updateStatus, setUpdateStatus] = useState('');
   const [refreshTable, setRefreshTable] = useState(false);
+  const [contracts, setContracts] = useState([]);
+
+  const handleContractNameClick = (contractName) => {
+    setLabelInfo((prevState) => ({
+      ...prevState,
+      contractName,
+    }));
+  };
   
 
   useEffect(() => {
     const fetchAirtableData = async () => {
       try {
         console.log('Fetching data for chainId:', chainId);
+  
         const projectsData = await fetchProjects();
         const categoriesData = await fetchCategories();
-        const fetchedRecordId = await fetchAirtableDataWithChainId(chainId);
-        setRecordId(fetchedRecordId[0].id); // Assuming only one record is fetched
+        const fetchedContracts = await fetchAirtableDataWithChainId(chainId); // Assume this returns an array of contracts
+  
+        setContracts(fetchedContracts); // Set the contracts state
         setProjects(projectsData);
         setCategories(categoriesData);
+  
+        if (fetchedContracts.length > 0) {
+          setRecordId(fetchedContracts[0].id);
+          console.log('Record ID fetched:', fetchedContracts[0].id);
+        } else {
+          setRecordId(''); // Clear record ID if no contracts are found
+        }
       } catch (error) {
         console.error('Error fetching Airtable data:', error);
       }
     };
-
+  
     if (chainId) {
       fetchAirtableData();
     }
   }, [chainId]);
+
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -146,6 +164,41 @@ const App = () => {
       setBlockscoutResponse({ error: error.message });
     }
   };
+
+  const handleVerifyContracts = async () => {
+    if (!contracts || contracts.length === 0) {
+      console.warn('No contracts available to verify');
+      return;
+    }
+  
+    setLoading(true); // Start loading indicator
+  
+    const updatedContracts = await Promise.all(contracts.map(async (contract) => {
+      try {
+        const { verified, contractName, sourceCode, verifiedAt, filePath } = await fetchBlockscoutData(contract.address, chainId);
+  
+        console.log(`Contract: ${contract.address}, Verified: ${verified}, Name: ${contractName}`);
+  
+        return {
+          ...contract,
+          verified,
+          contractName,
+          sourceCode,
+          verifiedAt,
+          filePath
+        };
+      } catch (error) {
+        console.error('Error verifying contract:', error);
+        return contract; // Return the original contract data if verification fails
+      }
+    }));
+  
+    console.log('Updated contracts array:', updatedContracts); // Log before setting state
+    setContracts(updatedContracts); // Update the state with the verification info
+    setLoading(false); // Stop loading indicator
+    console.log('Contracts state updated'); // Log after setting state
+  };
+  
 
   const handleGithubButtonClick = () => {
     const githubUrl = `https://github.com/search?q=${contractAddress}&type=code`;
@@ -264,10 +317,15 @@ const App = () => {
            <option value="534352">Scroll</option>
            <option value="34443">Mode</option>
           </select>
+          <button className="verify-button" onClick={handleVerifyContracts}>
+             Verify Contracts
+          </button>
           <UnlabeledContractsTable 
             chainId={chainId} 
             onSelectAddress={handleSelectAddress}
+            onContractNameClick={handleContractNameClick}
             refresh={refreshTable}
+            contracts={contracts}
           />
         </div>
         <div className="analyse section">
@@ -375,6 +433,8 @@ const App = () => {
                         usageCategory: '',
                         contractName: '',
                       });
+                      setProjectSearch('');
+                      setCategorySearch('');
                       setRefreshTable(prev => !prev);
                       console.log('Form fields cleared and table refreshed.');
                     }
