@@ -6,7 +6,7 @@ import FilesDisplay from './components/FilesDisplay/FilesDisplay';
 import BlockscoutResponseDisplay from './components/BlockscoutResponseDisplay/BlockscoutResponseDisplay';
 import { fetchSourcifyData, fetchFilesData } from './services/sourcifyApi';
 import { fetchBlockscoutData } from './services/blockscoutApi';
-import { fetchProjects, fetchCategories, updateAirtableRecord } from './services/airtableOperations';
+import { fetchProjects, fetchCategories, updateAirtableRecord, fetchUnlabeledContracts } from './services/airtableOperations';
 import { fetchAirtableDataWithChainId } from './services/airtableApi';
 import UnlabeledContractsTable from './components/UnlabeledContractsTable/UnlabeledContractsTable';
 import './App.css';
@@ -17,7 +17,7 @@ const App = () => {
   const [files, setFiles] = useState(null);
   const [blockscoutResponse, setBlockscoutResponse] = useState(null);
   const [contractAddress, setContractAddress] = useState('');
-  const [chainId, setChainId] = useState('42161');
+  const [chainId, setChainId] = useState('42161'); // Default to Arbitrum
   const [projects, setProjects] = useState([]);
   const [categories, setCategories] = useState([]);
   const [projectSearch, setProjectSearch] = useState('');
@@ -30,10 +30,12 @@ const App = () => {
   const [labelInfo, setLabelInfo] = useState({
     ownerProject: '',
     usageCategory: '',
-    contractName: '',});
+    contractName: '',
+  });
   const [updateStatus, setUpdateStatus] = useState('');
   const [refreshTable, setRefreshTable] = useState(false);
   const [contracts, setContracts] = useState([]);
+  const [error, setError] = useState(null);
 
   const handleContractNameClick = (contractName) => {
     setLabelInfo((prevState) => ({
@@ -62,8 +64,10 @@ const App = () => {
         } else {
           setRecordId(''); // Clear record ID if no contracts are found
         }
+        setError(null); // Clear any previous errors
       } catch (error) {
         console.error('Error fetching Airtable data:', error);
+        setError(error.message);
       }
     };
   
@@ -111,9 +115,9 @@ const App = () => {
 
   const handleChainChange = (newChainId) => {
     setChainId(newChainId);
-    setContractAddress(''); // Reset contract address if needed
-    setRecordId(''); // Reset record ID if needed
-    // Trigger a re-fetch of the unlabeled contracts automatically via useEffect
+    setContractAddress('');
+    setRecordId('');
+    setRefreshTable(prev => !prev);
   };
 
   const handleInputChange = (e) => {
@@ -130,7 +134,6 @@ const App = () => {
     setFiles(null);
     setBlockscoutResponse(null);
     setContractAddress(contractAddress);
-    setChainId(selectedChainId);
 
     try {
       const data = await fetchSourcifyData(contractAddress, selectedChainId);
@@ -249,7 +252,7 @@ const App = () => {
       "534352": "https://scrollscan.com/address/",
       "7777777": "https://explorer.zora.energy/address/",
       "8453": "https://basescan.com/address/",
-      "342": "https://explorer.zksync.io/address/"
+      "324": "https://explorer.zksync.io/address/"
     };
 
     if (!explorerUrls[chainId]) {
@@ -312,11 +315,12 @@ const App = () => {
            <option value="42161">Arbitrum</option>
            <option value="10">Optimism</option>
            <option value="8453">Base</option>
-           <option value="342">ZKSync</option>
+           <option value="324">ZKSync</option>
            <option value="7777777">Zora</option>
            <option value="534352">Scroll</option>
            <option value="34443">Mode</option>
           </select>
+          {error && <div className="error-message">{error}</div>}
           <button className="verify-button" onClick={handleVerifyContracts}>
              Verify Contracts
           </button>
@@ -333,11 +337,12 @@ const App = () => {
           <ContractForm
             onFormSubmit={handleFormSubmit}
             onFetchFiles={handleFetchFiles}
-            setRecordId={setRecordId} // Pass setRecordId as prop
-            setLabelInfo={setLabelInfo} // Pass setLabelInfo as prop
-            updateStatus={setUpdateStatus} // Pass setUpdateStatus as prop for updating status
-            contractAddress={contractAddress} // Pass down the contract address
+            setRecordId={setRecordId}
+            setLabelInfo={setLabelInfo}
+            updateStatus={setUpdateStatus}
+            contractAddress={contractAddress}
             setContractAddress={setContractAddress}
+            chainId={chainId}
           />
           {loading && <LoadingSpinner />}
           {response && <ResponseDisplay response={response} />}

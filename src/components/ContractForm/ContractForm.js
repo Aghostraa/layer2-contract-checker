@@ -1,63 +1,54 @@
-import React, { useState, useEffect} from 'react';
-import { fetchAirtableDataWithChainId } from '../../services/airtableApi'; // Step 1: Import the function
+import React, { useEffect, useState } from 'react';
+import { fetchAirtableDataWithChainId } from '../../services/airtableApi';
 
-const ContractForm = ({ onFormSubmit, onFetchFiles, contractAddress, setContractAddress }) => {
-  const [chainId, setChainId] = useState('10');
-  const [recordId, setRecordId] = useState(''); // Step 2: New state for record ID
+const ContractForm = ({ onFormSubmit, onFetchFiles, contractAddress, setContractAddress, chainId, setRecordId }) => {
+  const [localRecordId, setLocalRecordId] = useState('');
 
   useEffect(() => {
     if (contractAddress) {
-      fetchRecordId(); // Fetch the record ID whenever the contract address changes
+      fetchRecordId();
     }
-  }, [contractAddress]);
+  }, [contractAddress, chainId]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onFormSubmit(chainId, contractAddress);
-    fetchRecordId(); // Fetch record ID on form submit
+    fetchRecordId();
   };
 
   const handleFetchFiles = () => {
     onFetchFiles(chainId, contractAddress);
   };
 
-  // Step 3: Function to fetch record ID
   const fetchRecordId = async () => {
     try {
-      // Pass chainId to the fetch function
       const records = await fetchAirtableDataWithChainId(chainId);
       const matchingRecord = records.find(record => record.address === contractAddress);
       if (matchingRecord) {
+        setLocalRecordId(matchingRecord.id);
         setRecordId(matchingRecord.id);
       } else {
-        setRecordId('No matching record found');
+        setLocalRecordId('No matching record found');
+        setRecordId('');
       }
     } catch (error) {
       console.error('Error fetching record ID:', error);
-      setRecordId('Error fetching record ID');
+      setLocalRecordId('Error fetching record ID');
+      setRecordId('');
     }
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <div className="form-group">
-        <label htmlFor="chainSelect">Select Layer 2 Network</label>
-        <select
+        <label htmlFor="chainSelect">Selected Layer 2 Network</label>
+        <input
+          type="text"
           className="form-control"
           id="chainSelect"
-          value={chainId}
-          onChange={(e) => setChainId(e.target.value)}
-          required
-        >
-          <option value="10">OP Mainnet</option>
-          <option value="1101">Polygon zkEVM</option>
-          <option value="34443">Mode</option>
-          <option value="42161">Arbitrum One</option>
-          <option value="534352">Scroll</option>
-          <option value="7777777">Zora</option>
-          <option value="8453">Base</option>
-          <option value="324">ZKSync</option>
-        </select>
+          value={getChainName(chainId)}
+          readOnly
+        />
       </div>
       <div className="form-group">
         <label htmlFor="contractAddress">Contract Address</label>
@@ -67,7 +58,7 @@ const ContractForm = ({ onFormSubmit, onFetchFiles, contractAddress, setContract
           id="contractAddress"
           placeholder="Enter contract address"
           value={contractAddress}
-          onChange={(e) => setContractAddress(e.target.value)} // Update contract address from input
+          onChange={(e) => setContractAddress(e.target.value)}
           required
         />
       </div>
@@ -75,12 +66,29 @@ const ContractForm = ({ onFormSubmit, onFetchFiles, contractAddress, setContract
         <button type="submit" className="btn btn-primary">Sourcify</button>
         <button type="button" className="btn btn-secondary" onClick={handleFetchFiles}>Fetch Files</button>
       </div>
-      {recordId && <div className="form-group mt-3">
-        <label>Record ID:</label>
-        <p>{recordId}</p>
-      </div>}
+      {localRecordId && (
+        <div className="form-group mt-3">
+          <label>Record ID:</label>
+          <p>{localRecordId}</p>
+        </div>
+      )}
     </form>
   );
+};
+
+// Helper function to get chain name from chainId
+const getChainName = (chainId) => {
+  const chainNames = {
+    "10": "OP Mainnet",
+    "1101": "Polygon zkEVM",
+    "34443": "Mode",
+    "42161": "Arbitrum One",
+    "534352": "Scroll",
+    "7777777": "Zora",
+    "8453": "Base",
+    "324": "ZKSync"
+  };
+  return chainNames[chainId] || "Unknown Chain";
 };
 
 export default ContractForm;

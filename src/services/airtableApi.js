@@ -16,7 +16,8 @@ const chainIdToOriginKey = {
 export const fetchAirtableDataWithChainId = async (chainId) => {
   const originKey = chainIdToOriginKey[chainId];
   if (!originKey) {
-    throw new Error('Invalid Chain ID');
+    console.error(`Invalid Chain ID: ${chainId}`);
+    throw new Error(`Invalid Chain ID: ${chainId}`);
   }
 
   const filterByFormula = `FIND("${originKey}", {origin_key})`;

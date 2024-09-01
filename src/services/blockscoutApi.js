@@ -6,7 +6,7 @@ const blockscoutUrls = {
   "534352": "https://explorer.scroll.io/api/v2/smart-contracts/",
   "7777777": "https://explorer.zora.energy/api/v2/smart-contracts/",
   "8453": "https://base.blockscout.com/api/v2/smart-contracts/",
-  "342": "https://zksync.blockscout.com/api/v2/smart-contracts/"
+  "324": "https://zksync.blockscout.com/api/v2/smart-contracts/"
 };
 
 export const fetchBlockscoutData = async (contractAddress, chainId) => {
