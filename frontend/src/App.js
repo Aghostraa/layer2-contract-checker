@@ -9,6 +9,7 @@ import { fetchSourcifyData, fetchFilesData } from './services/sourcifyApi';
 import { fetchBlockscoutData } from './services/blockscoutApi';
 import { fetchProjects, fetchCategories, updateAirtableRecord, fetchUnlabeledContracts } from './services/airtableOperations';
 import { fetchAirtableDataWithChainId } from './services/airtableApi';
+import { fetchProcessedContracts } from './services/contractAnalysisApi';
 import UnlabeledContractsTable from './components/UnlabeledContractsTable/UnlabeledContractsTable';
 import ContractAnalysisPage from './pages/ContractAnalysisPage';
 import './App.css';
@@ -48,6 +49,60 @@ const App = () => {
   const [contracts, setContracts] = useState([]);
   const [error, setError] = useState(null);
 
+  const [isUsingGoServer, setIsUsingGoServer] = useState(false);
+  const [allProcessedContracts, setAllProcessedContracts] = useState([]);
+  const [displayedContracts, setDisplayedContracts] = useState([]);
+  const [jsonFile, setJsonFile] = useState(null);
+
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      console.log(`File selected: ${file.name}, Size: ${file.size} bytes, Type: ${file.type}`);
+      setJsonFile(file);
+      setError(null); // Clear any previous errors
+    } else {
+      console.log("File selection cancelled");
+      setJsonFile(null);
+    }
+  };
+
+  const handleJsonUpload = () => {
+    console.log("Initiating JSON upload process");
+    if (jsonFile) {
+      console.log(`Selected file: ${jsonFile.name}`);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        console.log("File read successfully");
+        try {
+          const jsonData = JSON.parse(e.target.result);
+          console.log("JSON parsed successfully", jsonData);
+          
+          if (Array.isArray(jsonData) && jsonData.length > 0) {
+            console.log(`Parsed ${jsonData.length} contracts from JSON`);
+            setContracts(jsonData);
+            setError(null);
+            setIsUsingGoServer(true); // Switch to processed contracts view
+            console.log("Contracts state updated with JSON data");
+          } else {
+            throw new Error("Invalid data structure in JSON");
+          }
+        } catch (error) {
+          console.error("Error parsing JSON:", error);
+          setError(`Failed to parse JSON file: ${error.message}. Please ensure it's a valid JSON array of contracts.`);
+        }
+      };
+      reader.onerror = (e) => {
+        console.error("Error reading file:", e);
+        setError("Failed to read the file. Please try again.");
+      };
+      reader.readAsText(jsonFile);
+    } else {
+      console.warn("No file selected for upload");
+      setError("Please select a JSON file to upload.");
+    }
+  };
+
   const [labelingStats, setLabelingStats] = useState({
     session: {
       count: 0,
@@ -84,35 +139,51 @@ const App = () => {
   
 
   useEffect(() => {
-    const fetchAirtableData = async () => {
+    const fetchData = async () => {
+      setLoading(true);
       try {
         console.log('Fetching data for chainId:', chainId);
   
         const projectsData = await fetchProjects();
         const categoriesData = await fetchCategories();
-        const fetchedContracts = await fetchAirtableDataWithChainId(chainId); // Assume this returns an array of contracts
-  
-        setContracts(fetchedContracts); // Set the contracts state
         setProjects(projectsData);
         setCategories(categoriesData);
   
+        let fetchedContracts;
+        if (isUsingGoServer) {
+          // Fetch all processed contracts from Go server
+          fetchedContracts = await fetchProcessedContracts();
+          // Filter contracts based on the selected chainId
+          fetchedContracts = fetchedContracts.filter(contract => 
+            contract.chainIds && contract.chainIds.includes(chainId)
+          );
+        } else {
+          // Fetch Airtable data for the specific chainId
+          fetchedContracts = await fetchAirtableDataWithChainId(chainId);
+        }
+  
+        setContracts(fetchedContracts);
+        
         if (fetchedContracts.length > 0) {
           setRecordId(fetchedContracts[0].id);
           console.log('Record ID fetched:', fetchedContracts[0].id);
         } else {
           setRecordId(''); // Clear record ID if no contracts are found
         }
+        
         setError(null); // Clear any previous errors
       } catch (error) {
-        console.error('Error fetching Airtable data:', error);
+        console.error('Error fetching data:', error);
         setError(error.message);
+      } finally {
+        setLoading(false);
       }
     };
   
     if (chainId) {
-      fetchAirtableData();
+      fetchData();
     }
-  }, [chainId]);
+  }, [chainId, isUsingGoServer]);
 
 
   useEffect(() => {
@@ -151,10 +222,21 @@ const App = () => {
     }
   };
 
+  const filterContractsByChain = (contracts, selectedChainId) => {
+    const filteredContracts = contracts.filter(contract => 
+      contract.chainIds && contract.chainIds.includes(selectedChainId)
+    );
+    setDisplayedContracts(filteredContracts);
+  };
+
+
   const handleChainChange = (newChainId) => {
     setChainId(newChainId);
     setContractAddress('');
     setRecordId('');
+    if (isUsingGoServer) {
+      filterContractsByChain(allProcessedContracts, newChainId);
+    }
     setRefreshTable(prev => !prev);
   };
 
@@ -162,8 +244,12 @@ const App = () => {
     const { id, value } = e.target;
     setLabelInfo(prevState => ({
       ...prevState,
-      [id]: value, // Use the input's `id` attribute to update the correct field in `labelInfo`
+      [id]: value
     }));
+  };
+
+  const toggleDataSource = () => {
+    setIsUsingGoServer(!isUsingGoServer);
   };
 
   const handleFormSubmit = async (selectedChainId, contractAddress) => {
@@ -351,27 +437,46 @@ const App = () => {
         <Route path="/" element={
           <div className="container">
             <div className="unlabeled section">
-              <h2 className="section-title">Unlabeled Contracts</h2>
-              <select onChange={(e) => handleChainChange(e.target.value)} value={chainId}>
-                <option value="42161">Arbitrum</option>
-                <option value="10">Optimism</option>
-                <option value="8453">Base</option>
-                <option value="324">ZKSync</option>
-                <option value="7777777">Zora</option>
-                <option value="534352">Scroll</option>
-                <option value="34443">Mode</option>
-              </select>
-              {error && <div className="error-message">{error}</div>}
-              <button className="verify-button" onClick={handleVerifyContracts}>
-                Verify Contracts
-              </button>
-              <UnlabeledContractsTable 
-                chainId={chainId} 
-                onSelectAddress={handleSelectAddress}
-                onContractNameClick={handleContractNameClick}
-                refresh={refreshTable}
-                contracts={contracts}
-              />
+              <h2 className="section-title">
+                {isUsingGoServer ? "Processed Contracts" : "Unlabeled Contracts"}
+              </h2>
+              <div className="controls">
+                <select onChange={(e) => handleChainChange(e.target.value)} value={chainId}>
+                  <option value="42161">Arbitrum</option>
+                  <option value="10">Optimism</option>
+                  <option value="8453">Base</option>
+                  <option value="324">ZKSync</option>
+                  <option value="7777777">Zora</option>
+                  <option value="534352">Scroll</option>
+                  <option value="34443">Mode</option>
+                </select>
+                <button onClick={toggleDataSource} className="toggle-source-btn">
+                  {isUsingGoServer ? "Switch to Airtable" : "Switch to Processed Contracts"}
+                </button>
+              </div>
+              <div className="json-upload">
+                <input 
+                 type="file" 
+                 accept=".json" 
+                 onChange={handleFileChange} 
+                 className="file-input"
+                />
+                <button onClick={handleJsonUpload} className="upload-btn">
+                   Upload JSON
+                </button>
+              </div>
+              {loading ? (
+                <LoadingSpinner />
+              ) : (
+                <UnlabeledContractsTable 
+                  chainId={chainId} 
+                  onSelectAddress={handleSelectAddress}
+                  onContractNameClick={handleContractNameClick}
+                  refresh={refreshTable}
+                  contracts={contracts}
+                  isProcessedData={isUsingGoServer}
+                />
+              )}
             </div>
             <div className="analyse section">
               <h2 className="section-title">Analyse</h2>
@@ -504,7 +609,7 @@ const App = () => {
       
               <div className="labeling-stats-container">
                 <h3 className="section-subtitle">Labeling Statistics</h3>
-                <div className="stats-group"></div>
+                <div className="stats-group">
                  <h4>Current Session</h4>
                  <div className="stat-item">
                     <span className="stat-label">Contracts Labeled:</span>
@@ -536,7 +641,8 @@ const App = () => {
                 </div>
               </div>
             </div>
-           } />
+          </div>
+        } />
         <Route path="/contract-analysis" element={<ContractAnalysisPage />} />
       </Routes>
     </Router>

@@ -85,3 +85,20 @@ export const processContracts = (maxQueries = null, onProgress) => {
     };
   });
 };
+
+export const fetchProcessedContracts = async () => {
+  try {
+    const response = await fetch('http://localhost:8080/contracts');
+
+    if (!response.ok) {
+      throw new Error(`Fetching processed contracts failed: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('Fetched processed contract data:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching processed contracts:', error);
+    throw error;
+  }
+};
