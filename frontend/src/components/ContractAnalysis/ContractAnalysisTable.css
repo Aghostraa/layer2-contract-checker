@@ -1,0 +1,68 @@
+.contract-analysis-container {
+    width: 500px;
+    height: 450px;
+    background-color: var(--secondary-bg);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin: 20px auto;
+  }
+  
+  .contract-analysis-container h2 {
+    color: var(--text-primary);
+    margin-bottom: 15px;
+    text-align: center;
+  }
+  
+  .table-container {
+    height: 380px;
+    overflow-y: auto;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+  }
+  
+  .contract-analysis-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .contract-analysis-table th,
+  .contract-analysis-table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--input-border);
+  }
+  
+  .contract-analysis-table th {
+    background-color: var(--accent-color);
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  
+  .contract-analysis-table tbody tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  .contract-analysis-table tbody tr:hover {
+    background-color: rgba(42, 157, 94, 0.1);
+  }
+  
+  /* Styling the scrollbar */
+  .table-container::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .table-container::-webkit-scrollbar-track {
+    background: var(--secondary-bg);
+  }
+  
+  .table-container::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color);
+    border-radius: 4px;
+  }
+  
+  .table-container::-webkit-scrollbar-thumb:hover {
+    background-color: var(--button-hover);
+  }

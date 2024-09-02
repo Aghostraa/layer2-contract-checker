@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import ContractForm from './components/ContractForm/ContractForm';
 import LoadingSpinner from './components/LoadingSpinner/LoadingSpinner';
 import ResponseDisplay from './components/ResponseDisplay/ResponseDisplay';
@@ -9,7 +10,17 @@ import { fetchBlockscoutData } from './services/blockscoutApi';
 import { fetchProjects, fetchCategories, updateAirtableRecord, fetchUnlabeledContracts } from './services/airtableOperations';
 import { fetchAirtableDataWithChainId } from './services/airtableApi';
 import UnlabeledContractsTable from './components/UnlabeledContractsTable/UnlabeledContractsTable';
+import ContractAnalysisPage from './pages/ContractAnalysisPage';
 import './App.css';
+
+const Navigation = () => (
+  <nav className="main-nav">
+    <ul>
+      <li><Link to="/" className="nav-link">Home</Link></li>
+      <li><Link to="/contract-analysis" className="nav-link">Contract Analysis</Link></li>
+    </ul>
+  </nav>
+);
 
 const App = () => {
   const [loading, setLoading] = useState(false);
@@ -36,6 +47,33 @@ const App = () => {
   const [refreshTable, setRefreshTable] = useState(false);
   const [contracts, setContracts] = useState([]);
   const [error, setError] = useState(null);
+
+  const [labelingStats, setLabelingStats] = useState({
+    session: {
+      count: 0,
+      gasSpent: 0,
+      txCount: 0,
+    },
+    allTime: {
+      count: 0,
+      gasSpent: 0,
+      txCount: 0,
+    },
+  });
+  const updateLabelingStats = (contract) => {
+    setLabelingStats(prevStats => ({
+      session: {
+        count: prevStats.session.count + 1,
+        gasSpent: prevStats.session.gasSpent + parseFloat(contract.gas_eth || 0),
+        txCount: prevStats.session.txCount + parseInt(contract.txcount || 0),
+      },
+      allTime: {
+        count: prevStats.allTime.count + 1,
+        gasSpent: prevStats.allTime.gasSpent + parseFloat(contract.gas_eth || 0),
+        txCount: prevStats.allTime.txCount + parseInt(contract.txcount || 0),
+      },
+    }));
+  };
 
   const handleContractNameClick = (contractName) => {
     setLabelInfo((prevState) => ({
@@ -301,193 +339,207 @@ const App = () => {
   
 
   return (
-    <>
+    <Router>
       <div className="background-container">
         <div className="background-gradient-group">
           <div className="background-gradient-yellow"></div>
           <div className="background-gradient-green"></div>
         </div>
       </div>
-      <div className="container">
-        <div className="unlabeled section">
-          <h2 className="section-title">Unlabeled Contracts</h2>
-          <select onChange={(e) => handleChainChange(e.target.value)} value={chainId}>
-           <option value="42161">Arbitrum</option>
-           <option value="10">Optimism</option>
-           <option value="8453">Base</option>
-           <option value="324">ZKSync</option>
-           <option value="7777777">Zora</option>
-           <option value="534352">Scroll</option>
-           <option value="34443">Mode</option>
-          </select>
-          {error && <div className="error-message">{error}</div>}
-          <button className="verify-button" onClick={handleVerifyContracts}>
-             Verify Contracts
-          </button>
-          <UnlabeledContractsTable 
-            chainId={chainId} 
-            onSelectAddress={handleSelectAddress}
-            onContractNameClick={handleContractNameClick}
-            refresh={refreshTable}
-            contracts={contracts}
-          />
-        </div>
-        <div className="analyse section">
-          <h2 className="section-title">Analyse</h2>
-          <ContractForm
-            onFormSubmit={handleFormSubmit}
-            onFetchFiles={handleFetchFiles}
-            setRecordId={setRecordId}
-            setLabelInfo={setLabelInfo}
-            updateStatus={setUpdateStatus}
-            contractAddress={contractAddress}
-            setContractAddress={setContractAddress}
-            chainId={chainId}
-          />
-          {loading && <LoadingSpinner />}
-          {response && <ResponseDisplay response={response} />}
-          {response && (
-            <div className="button-group">
-              <button className="btn" onClick={handleGithubButtonClick}>Github</button>
-              <button className="btn" onClick={handleBlockscoutButtonClick}>Blockscout</button>
-              <button className="btn" onClick={handleExplorerButtonClick}>Explorer</button>
-              <button className="btn btn-secondary" onClick={handleGoogleButtonClick}>Google Search</button>
-              <button className="btn btn-secondary" onClick={handleDedaubButtonClick}>Dedaub Lookup</button>
-            </div>
-          )}
-          {files && <FilesDisplay files={files} />}
-          {blockscoutResponse && <BlockscoutResponseDisplay response={blockscoutResponse} />}
-        </div>
-        <div className="label section">
-          <h2 className="section-title">Label</h2>
-          <div className="form-container">
-            <div className="searchable-dropdown" ref={projectDropdownRef}>
-              <label htmlFor="ownerProject">Owner Project</label>
-              <input
-                type="text"
-                id="ownerProject"
-                value={projectSearch}
-                onChange={handleProjectSearch}
-                onClick={() => setIsProjectDropdownOpen(true)}
-                placeholder="Search or select a project"
-                className="form-control"
+      <Navigation />
+      <Routes>
+        <Route path="/" element={
+          <div className="container">
+            <div className="unlabeled section">
+              <h2 className="section-title">Unlabeled Contracts</h2>
+              <select onChange={(e) => handleChainChange(e.target.value)} value={chainId}>
+                <option value="42161">Arbitrum</option>
+                <option value="10">Optimism</option>
+                <option value="8453">Base</option>
+                <option value="324">ZKSync</option>
+                <option value="7777777">Zora</option>
+                <option value="534352">Scroll</option>
+                <option value="34443">Mode</option>
+              </select>
+              {error && <div className="error-message">{error}</div>}
+              <button className="verify-button" onClick={handleVerifyContracts}>
+                Verify Contracts
+              </button>
+              <UnlabeledContractsTable 
+                chainId={chainId} 
+                onSelectAddress={handleSelectAddress}
+                onContractNameClick={handleContractNameClick}
+                refresh={refreshTable}
+                contracts={contracts}
               />
-              {isProjectDropdownOpen && (
-                <ul className="dropdown-list">
-                  {filteredProjects.map(project => (
-                    <li key={project.id} onClick={() => selectProject(project)}>
-                      {project.name}
-                    </li>
-                  ))}
-                </ul>
-              )}
             </div>
-  
-            <div className="searchable-dropdown" ref={categoryDropdownRef}>
-              <label htmlFor="usageCategory">Usage Category</label>
-              <input
-                type="text"
-                id="usageCategory"
-                value={categorySearch}
-                onChange={handleCategorySearch}
-                onClick={() => setIsCategoryDropdownOpen(true)}
-                placeholder="Search or select a category"
-                className="form-control"
+            <div className="analyse section">
+              <h2 className="section-title">Analyse</h2>
+              <ContractForm
+                onFormSubmit={handleFormSubmit}
+                onFetchFiles={handleFetchFiles}
+                setRecordId={setRecordId}
+                setLabelInfo={setLabelInfo}
+                updateStatus={setUpdateStatus}
+                contractAddress={contractAddress}
+                setContractAddress={setContractAddress}
+                chainId={chainId}
               />
-              {isCategoryDropdownOpen && (
-                <ul className="dropdown-list">
-                  {filteredCategories.map(category => (
-                    <li key={category.id} onClick={() => selectCategory(category)}>
-                      {category.name}
-                    </li>
-                  ))}
-                </ul>
+              {loading && <LoadingSpinner />}
+              {response && <ResponseDisplay response={response} />}
+              {response && (
+                <div className="button-group">
+                  <button className="btn" onClick={handleGithubButtonClick}>Github</button>
+                  <button className="btn" onClick={handleBlockscoutButtonClick}>Blockscout</button>
+                  <button className="btn" onClick={handleExplorerButtonClick}>Explorer</button>
+                  <button className="btn btn-secondary" onClick={handleGoogleButtonClick}>Google Search</button>
+                  <button className="btn btn-secondary" onClick={handleDedaubButtonClick}>Dedaub Lookup</button>
+                </div>
               )}
+              {files && <FilesDisplay files={files} />}
+              {blockscoutResponse && <BlockscoutResponseDisplay response={blockscoutResponse} />}
             </div>
-  
-            <label htmlFor="contractName">Contract Name</label>
-            <input 
-              type="text" 
-              id="contractName" 
-              value={labelInfo.contractName}
-              onChange={handleInputChange}
-              className="form-control" 
-            />
-  
-            <label htmlFor="labeler">Labeler</label>
-            <input 
-              type="text" 
-              id="labeler" 
-              value={labelInfo.labeler}
-              onChange={handleInputChange}
-              className="form-control" 
-            />
-            
-            <button className="btn btn-primary" onClick={() => { 
-              if (recordId) {
-                setLoading(true);
-                updateAirtableRecord(recordId, labelInfo)
-                  .then(response => {
-                    if(response) {
-                      setUpdateStatus('Success');
-                      setLoading(false);
-                      setContractAddress('');
-                      setRecordId('');
-                      setLabelInfo({
-                        ownerProject: '',
-                        usageCategory: '',
-                        contractName: '',
-                      });
-                      setProjectSearch('');
-                      setCategorySearch('');
-                      setRefreshTable(prev => !prev);
-                      console.log('Form fields cleared and table refreshed.');
+            <div className="label section">
+              <h2 className="section-title">Label</h2>
+              <div className="form-container">
+                <div className="searchable-dropdown" ref={projectDropdownRef}>
+                  <label htmlFor="ownerProject">Owner Project</label>
+                  <input
+                    type="text"
+                    id="ownerProject"
+                    value={projectSearch}
+                    onChange={handleProjectSearch}
+                    onClick={() => setIsProjectDropdownOpen(true)}
+                    placeholder="Search or select a project"
+                    className="form-control"
+                  />
+                  {isProjectDropdownOpen && (
+                    <ul className="dropdown-list">
+                      {filteredProjects.map(project => (
+                        <li key={project.id} onClick={() => selectProject(project)}>
+                          {project.name}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+      
+                <div className="searchable-dropdown" ref={categoryDropdownRef}>
+                  <label htmlFor="usageCategory">Usage Category</label>
+                  <input
+                    type="text"
+                    id="usageCategory"
+                    value={categorySearch}
+                    onChange={handleCategorySearch}
+                    onClick={() => setIsCategoryDropdownOpen(true)}
+                    placeholder="Search or select a category"
+                    className="form-control"
+                  />
+                  {isCategoryDropdownOpen && (
+                    <ul className="dropdown-list">
+                      {filteredCategories.map(category => (
+                        <li key={category.id} onClick={() => selectCategory(category)}>
+                          {category.name}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+      
+                <label htmlFor="contractName">Contract Name</label>
+                <input 
+                  type="text" 
+                  id="contractName" 
+                  value={labelInfo.contractName}
+                  onChange={handleInputChange}
+                  className="form-control" 
+                />
+      
+                <label htmlFor="labeler">Labeler</label>
+                <input 
+                  type="text" 
+                  id="labeler" 
+                  value={labelInfo.labeler}
+                  onChange={handleInputChange}
+                  className="form-control" 
+                />
+                
+                <button className="btn btn-primary" onClick={() => { 
+                  if (recordId) {
+                    setLoading(true);
+                    updateAirtableRecord(recordId, labelInfo)
+                      .then(response => {
+                        if(response) {
+                          setUpdateStatus('Success');
+                          const labeledContract = contracts.find(c => c.id === recordId);
+                          updateLabelingStats(labeledContract);
+                          setLoading(false);
+                          setContractAddress('');
+                          setRecordId('');
+                          setLabelInfo({
+                            ownerProject: '',
+                            usageCategory: '',
+                            contractName: '',
+                          });
+                          setProjectSearch('');
+                          setCategorySearch('');
+                          setRefreshTable(prev => !prev);
+                          console.log('Form fields cleared and table refreshed.');
+                        }
+                        setLoading(false);
+                     })
+                     .catch(error => {
+                       console.error('Error updating record:', error);
+                       setUpdateStatus('Failed');
+                       setLoading(false);
+                     });
+                    } else {
+                      console.error('Record ID is not available');
+                      setUpdateStatus('Failed');
                     }
-                    setLoading(false);
-                 })
-                 .catch(error => {
-                   console.error('Error updating record:', error);
-                   setUpdateStatus('Failed');
-                   setLoading(false);
-                 });
-                } else {
-                  console.error('Record ID is not available');
-                  setUpdateStatus('Failed');
-                }
-            }}>
-              Submit
-            </button>
-          </div>
-  
-          <div className="ranking-container">
-            <h3 className="section-subtitle">Chain Overview</h3>
-            <h4 className="sub-subtitle">Unlabeled transactions</h4>
-            <div className="ranking-list">
-              <div className="ranking-item">
-                <span className="chain-name">Base</span>
-                <span className="chain-value">2.7M</span>
+                }}>
+                  Submit
+                </button>
               </div>
-              <div className="ranking-item">
-                <span className="chain-name">OP Mainnet</span>
-                <span className="chain-value">709K</span>
-              </div>
-              <div className="ranking-item">
-                <span className="chain-name">Zora</span>
-                <span className="chain-value">134K</span>
-              </div>
-              <div className="ranking-item">
-                <span className="chain-name">Arbitrum One</span>
-                <span className="chain-value">682K</span>
-              </div>
-              <div className="ranking-item">
-                <span className="chain-name">Polygon zkEVM</span>
-                <span className="chain-value">15K</span>
+      
+              <div className="labeling-stats-container">
+                <h3 className="section-subtitle">Labeling Statistics</h3>
+                <div className="stats-group"></div>
+                 <h4>Current Session</h4>
+                 <div className="stat-item">
+                    <span className="stat-label">Contracts Labeled:</span>
+                    <span className="stat-value">{labelingStats.session.count}</span>
+                 </div>
+                 <div className="stat-item">
+                    <span className="stat-label">Total labeled SM Gas Spent:</span>
+                   <span className="stat-value">{labelingStats.session.gasSpent.toFixed(3)} ETH</span>
+                 </div>
+                 <div className="stat-item">
+                    <span className="stat-label">Total labeled SM Transactions:</span>
+                   <span className="stat-value">{labelingStats.session.txCount}</span>
+                 </div>
+                </div>
+                <div className="stats-group">
+                  <h4>All Time</h4>
+                  <div className="stat-item">
+                    <span className="stat-label">Contracts Labeled:</span>
+                    <span className="stat-value">{labelingStats.allTime.count}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Total labeled SM Gas Spent:</span>
+                    <span className="stat-value">{labelingStats.allTime.gasSpent.toFixed(3)} ETH</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Total labeled SM Transactions:</span>
+                    <span className="stat-value">{labelingStats.allTime.txCount}</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </>
+           } />
+        <Route path="/contract-analysis" element={<ContractAnalysisPage />} />
+      </Routes>
+    </Router>
   );
 };
 

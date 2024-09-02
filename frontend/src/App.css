@@ -317,3 +317,152 @@ input[type="text"]::placeholder {
   background-color: rgba(255, 255, 255, 0.3);
   border-radius: 4px;
 }
+.labeling-stats-container {
+  margin-top: 20px;
+  background-color: var(--input-bg);
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.labeling-stats-container .section-subtitle {
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.stats-group {
+  margin-bottom: 20px;
+  background-color: var(--secondary-bg);
+  border-radius: 6px;
+  padding: 15px;
+}
+
+.stats-group h4 {
+  font-size: 1rem;
+  margin-bottom: 10px;
+  color: var(--accent-color);
+  border-bottom: 1px solid var(--input-border);
+  padding-bottom: 5px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.stat-label {
+  color: var(--text-primary);
+}
+
+.stat-value {
+  font-weight: bold;
+  color: var(--accent-color);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .labeling-stats-container {
+    padding: 15px;
+  }
+
+  .stats-group {
+    padding: 10px;
+  }
+
+  .stat-item {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  .stat-value {
+    margin-top: 2px;
+  }
+}
+
+/* Enhancements to existing styles for consistency */
+.label.section {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-container {
+  margin-bottom: 20px;
+}
+
+.btn.btn-primary {
+  margin-top: 15px;
+}
+
+/* Adjustments to maintain consistent spacing */
+.searchable-dropdown,
+.form-control {
+  margin-bottom: 15px;
+}
+
+/* Hover effects for interactive elements */
+.stat-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+/* Additional visual enhancements */
+.labeling-stats-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.labeling-stats-container::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  left: -50px;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, var(--accent-color) 0%, transparent 70%);
+  opacity: 0.1;
+  pointer-events: none;
+}
+.main-nav {
+  background-color: rgba(42, 52, 51, 0.7);
+  padding: 1rem;
+  margin-bottom: 2rem;
+}
+
+.main-nav ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.main-nav li {
+  margin: 0 1rem;
+}
+
+.nav-link {
+  color: var(--text-primary);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.1rem;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.nav-link:hover {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+/* You can add this if you want to style the active link differently */
+.nav-link.active {
+  background-color: var(--accent-color);
+  color: white;
+}

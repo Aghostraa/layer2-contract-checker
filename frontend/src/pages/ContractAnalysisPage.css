@@ -1,0 +1,101 @@
+.contract-analysis-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: var(--primary-bg);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .contract-analysis-page h1 {
+    color: var(--text-primary);
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 2rem;
+  }
+  
+  .csv-uploader-container {
+    margin-bottom: 20px;
+    padding: 20px;
+    background-color: var(--secondary-bg);
+    border-radius: 8px;
+  }
+  
+  .error {
+    color: #ff6b6b;
+    background-color: rgba(255, 107, 107, 0.1);
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  
+  .no-contracts {
+    text-align: center;
+    color: var(--text-primary);
+    font-style: italic;
+    margin-top: 20px;
+  }
+  
+  @media (max-width: 768px) {
+    .contract-analysis-page {
+      padding: 10px;
+    }
+  }
+
+  .process-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  .process-button, .test-button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .process-button:hover, .test-button:hover {
+    background-color: var(--button-hover);
+  }
+  
+  .process-button:disabled, .test-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  .test-controls {
+    display: flex;
+    align-items: center;
+  }
+  
+  .test-controls input {
+    width: 60px;
+    margin-right: 10px;
+    padding: 5px;
+    font-size: 16px;
+  }
+  
+  .processing-stats {
+    background-color: var(--secondary-bg);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .processing-stats h2 {
+    margin-top: 0;
+    color: var(--accent-color);
+  }
+  
+  .processing-stats p {
+    margin: 10px 0;
+    font-size: 16px;
+  }
